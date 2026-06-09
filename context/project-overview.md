@@ -1,4 +1,3 @@
-
 # NSDI — National Spatial Data Infrastructure
 
 ## Project Specification v1.0
@@ -434,6 +433,12 @@ Every asset with a bounding box renders a MapLibre GL preview map on its detail 
 Collections with multiple spatial assets show a combined coverage map.
 
 ---
+
+## Design Overview-UI
+
+Refer to the screen shot below as the UI, it does not have to be exact but use it as a reference.
+
+- @context/screenshots/ui.png
 
 ## API Design
 

@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NSDI Dashboard Mockup - Dark</title>
+  <style>
+    :root {
+      --bg: #071423;
+      --bg-soft: #0c1d31;
+      --panel: #0a1728;
+      --panel-2: #10233a;
+      --line: #174269;
+      --text: #e9f4ff;
+      --muted: #87aaca;
+      --accent: #15c9ea;
+
+      --vector: #1587ff;
+      --raster: #45b74a;
+      --pointcloud: #ffac33;
+      --gnss: #a071ff;
+      --survey: #ce1126;
+      --aiml: #ff4d6d;
+      --cloud: #15c9ea;
+      --meta: #7a8ea8;
+
+      --png-red: #ce1126;
+      --png-maroon: #6d1a26;
+      --png-yellow: #f4c430;
+      --png-black: #111111;
+
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 9px;
+      --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "Space Grotesk", "IBM Plex Sans", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(1200px 700px at 100% -10%, rgba(21, 201, 234, 0.14) 0%, transparent 65%),
+        radial-gradient(900px 500px at -10% 110%, rgba(16, 35, 58, 0.4) 0%, transparent 65%),
+        radial-gradient(900px 520px at 45% 55%, rgba(206, 17, 38, 0.08) 0%, transparent 70%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.35;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 280px 1fr 360px;
+      min-height: 100vh;
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(21, 201, 234, 0.06), rgba(0, 0, 0, 0)) , var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+    }
+
+    .sidebar {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed var(--line);
+    }
+
+    .logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 11px;
+      background:
+        conic-gradient(from 210deg, var(--vector), var(--raster), var(--cloud), var(--aiml), var(--vector));
+      box-shadow: 0 0 0 2px rgba(21, 201, 234, 0.2) inset;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0.2px;
+    }
+
+    .brand p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      font-size: 0.72rem;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--bg-soft);
+      color: var(--muted);
+    }
+
+    .chip.good {
+      border-color: #15c9ea;
+      color: #15c9ea;
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    .portal-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .portal-item {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 8px 9px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(16, 35, 58, 0.45);
+      font-size: 0.8rem;
+    }
+
+    .portal-item.active {
+      border-color: rgba(21, 201, 234, 0.65);
+      background: rgba(21, 201, 234, 0.14);
+    }
+
+    .portal-role {
+      color: #78dff2;
+      font-size: 0.72rem;
+    }
+
+    .section-title {
+      margin: 6px 0 8px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.9px;
+      text-transform: uppercase;
+    }
+
+    .type-list, .recent-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .type-item, .recent-item {
+      display: grid;
+      grid-template-columns: 10px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 9px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: rgba(15, 31, 50, 0.56);
+    }
+
+    .type-item:hover, .recent-item:hover {
+      border-color: var(--line);
+      background: rgba(21, 201, 234, 0.12);
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .count {
+      font-size: 0.74rem;
+      color: var(--muted);
+    }
+
+    .main {
+      padding: 14px;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 14px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search {
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--bg-soft);
+      color: var(--text);
+      padding: 11px 12px;
+      width: 100%;
+      font-size: 0.92rem;
+      outline: none;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .session-strip {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: linear-gradient(130deg, rgba(21, 201, 234, 0.08), rgba(16, 35, 58, 0.85) 65%, rgba(206, 17, 38, 0.1));
+      padding: 10px 12px;
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .identity {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      color: #072131;
+      border: 1px solid rgba(21, 201, 234, 0.5);
+      background: linear-gradient(160deg, #15c9ea, #42e2ff);
+    }
+
+    .identity strong {
+      display: block;
+      font-size: 0.86rem;
+    }
+
+    .identity small {
+      color: var(--muted);
+      font-size: 0.72rem;
+    }
+
+    .auth-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      color: var(--text);
+      background: var(--panel-2);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.85rem;
+    }
+
+    .btn.primary {
+      background: linear-gradient(180deg, #20d0ef, #0aa8c8);
+      border-color: #15c9ea;
+      color: #041823;
+      font-weight: 700;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .kpi {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px;
+      background: var(--bg-soft);
+    }
+
+    .kpi label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.74rem;
+      margin-bottom: 6px;
+    }
+
+    .kpi strong {
+      font-size: 1.2rem;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 12px;
+      min-height: 0;
+    }
+
+    .collections, .assets {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--bg-soft);
+      padding: 12px;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 10px;
+    }
+
+    .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .head h2 {
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    .collection-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      overflow: auto;
+      padding-right: 3px;
+    }
+
+    .collection-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(15, 31, 50, 0.35));
+      min-height: 135px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 8px;
+    }
+
+    .tag {
+      font-size: 0.68rem;
+      color: #dcecff;
+      border: 1px solid rgba(21, 201, 234, 0.35);
+      padding: 3px 6px;
+      border-radius: 999px;
+      width: fit-content;
+    }
+
+    .map-mini {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background:
+        linear-gradient(120deg, rgba(24, 119, 55, 0.34), rgba(14, 72, 39, 0.36) 40%, rgba(21, 201, 234, 0.25)),
+        repeating-linear-gradient(0deg, rgba(120, 182, 221, 0.1) 0 1px, transparent 1px 10px),
+        repeating-linear-gradient(90deg, rgba(120, 182, 221, 0.1) 0 1px, transparent 1px 10px);
+      min-height: 55px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .map-mini::after {
+      content: "";
+      position: absolute;
+      inset: 18% 22% 24% 27%;
+      border: 2px solid rgba(207, 231, 255, 0.8);
+      border-radius: 4px;
+    }
+
+    .asset-list {
+      overflow: auto;
+      display: grid;
+      gap: 8px;
+    }
+
+    .asset {
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 10px;
+      background: #081628;
+      display: grid;
+      gap: 6px;
+    }
+
+    .meta {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.74rem;
+    }
+
+    .drawer {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+
+    .drawer h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .drawer .map-big {
+      min-height: 220px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background:
+        radial-gradient(circle at 70% 22%, rgba(220, 235, 255, 0.2), transparent 30%),
+        linear-gradient(135deg, rgba(24, 119, 55, 0.35), rgba(14, 72, 39, 0.34) 40%, rgba(21, 201, 234, 0.25)),
+        repeating-linear-gradient(0deg, rgba(120, 182, 221, 0.12) 0 1px, transparent 1px 20px),
+        repeating-linear-gradient(90deg, rgba(120, 182, 221, 0.12) 0 1px, transparent 1px 20px);
+      position: relative;
+    }
+
+    .drawer .map-big::after {
+      content: "BBox: 146.21, -6.12, 147.01, -5.46";
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      font-size: 0.74rem;
+      color: #d7ecff;
+      background: rgba(7, 20, 35, 0.72);
+      border: 1px solid rgba(126, 170, 208, 0.4);
+      border-radius: 8px;
+      padding: 5px 7px;
+    }
+
+    .field {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 10px;
+      background: var(--bg-soft);
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .lineup {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .auth-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    @media (max-width: 1200px) {
+      .app {
+        grid-template-columns: 82px 1fr 340px;
+      }
+      .sidebar .text, .sidebar .count, .sidebar .section-title, .sidebar .brand p {
+        display: none;
+      }
+      .sidebar .type-item, .sidebar .recent-item {
+        grid-template-columns: 10px 1fr;
+      }
+      .sidebar .brand {
+        justify-content: center;
+      }
+      .sidebar .chip-row {
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+      }
+      .sidebar { order: 1; }
+      .main { order: 2; }
+      .drawer { order: 3; }
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+      .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .collection-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+      .top-actions {
+        justify-content: stretch;
+      }
+      .btn { flex: 1; }
+      .lineup {
+        grid-template-columns: 1fr;
+      }
+      .auth-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel sidebar">
+      <div class="brand">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="logo"></div>
+          <div class="text">
+            <h1>NSDI</h1>
+            <p>National Spatial Data Infrastructure</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="chip-row">
+        <span class="chip">Agency</span>
+        <span class="chip">All Features</span>
+      </div>
+
+      <div>
+        <div class="section-title">My Portals</div>
+        <div class="portal-list">
+          <div class="portal-item active"><span class="text">National Mapping Unit</span><span class="portal-role">Admin</span></div>
+          <div class="portal-item"><span class="text">Survey Ops Team</span><span class="portal-role">Editor</span></div>
+          <div class="portal-item"><span class="text">Public Data Portal</span><span class="portal-role">Viewer</span></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Asset Types</div>
+        <div class="type-list">
+          <div class="type-item"><span class="dot" style="background:var(--vector)"></span><span class="text">Vector</span><span class="count">486</span></div>
+          <div class="type-item"><span class="dot" style="background:var(--raster)"></span><span class="text">Raster</span><span class="count">1,094</span></div>
+          <div class="type-item"><span class="dot" style="background:var(--pointcloud)"></span><span class="text">Point Cloud</span><span class="count">203</span></div>
+          <div class="type-item"><span class="dot" style="background:var(--gnss)"></span><span class="text">GNSS</span><span class="count">617</span></div>
+          <div class="type-item"><span class="dot" style="background:var(--aiml)"></span><span class="text">AI / ML</span><span class="count">79</span></div>
+          <div class="type-item"><span class="dot" style="background:var(--cloud)"></span><span class="text">Cloud-Native</span><span class="count">240</span></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Recent Activity</div>
+        <div class="recent-list">
+          <div class="recent-item"><span class="dot" style="background:#6f8cac"></span><span class="text">Uploaded COPC tile set</span></div>
+          <div class="recent-item"><span class="dot" style="background:#6f8cac"></span><span class="text">Tagged RINEX bundle</span></div>
+          <div class="recent-item"><span class="dot" style="background:#6f8cac"></span><span class="text">Generated STAC item</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="panel main">
+      <div class="topbar">
+        <input class="search" value="Search by title, EPSG, format, extent, collection..." readonly />
+        <div class="top-actions">
+          <button class="btn">Filter</button>
+          <button class="btn">Bulk Upload</button>
+          <button class="btn primary">+ New Asset</button>
+        </div>
+      </div>
+
+      <div class="session-strip">
+        <div class="identity">
+          <div class="avatar">AP</div>
+          <div>
+            <strong>Alois Palatai</strong>
+            <small>Signed in via GitHub SSO - Portal: National Mapping Unit</small>
+          </div>
+        </div>
+        <div class="auth-tags">
+          <span class="chip good">Role: Admin</span>
+          <span class="chip">Policy: agency-rbac-v2</span>
+          <span class="chip">MFA Verified</span>
+        </div>
+      </div>
+
+      <section class="kpi-grid">
+        <article class="kpi"><label>Total Assets</label><strong>2,761</strong></article>
+        <article class="kpi"><label>Collections</label><strong>118</strong></article>
+        <article class="kpi"><label>Spatial Coverage</label><strong>91%</strong></article>
+        <article class="kpi"><label>AI Metadata Filled</label><strong>73%</strong></article>
+      </section>
+
+      <section class="content-grid">
+        <div class="collections">
+          <div class="head"><h2>Collections</h2><span class="chip">Grid View</span></div>
+          <div class="collection-grid">
+            <article class="collection-card">
+              <span class="tag" style="background:rgba(255,159,26,0.22)">Point Cloud / Survey</span>
+              <div>
+                <strong>2024 Topographic Survey - Morobe Province</strong>
+                <div class="meta"><span>LAS, RINEX, GeoTIFF</span><span>42 assets</span></div>
+              </div>
+              <div class="map-mini"></div>
+            </article>
+            <article class="collection-card">
+              <span class="tag" style="background:rgba(69,183,74,0.24)">Raster / STAC</span>
+              <div>
+                <strong>Sentinel-2 Archive PNG 2020-2024</strong>
+                <div class="meta"><span>COG, STAC</span><span>612 assets</span></div>
+              </div>
+              <div class="map-mini"></div>
+            </article>
+            <article class="collection-card">
+              <span class="tag" style="background:rgba(206,17,38,0.24)">AI / ML</span>
+              <div>
+                <strong>Road Network ML Training Set</strong>
+                <div class="meta"><span>GeoParquet labels</span><span>117 assets</span></div>
+              </div>
+              <div class="map-mini"></div>
+            </article>
+            <article class="collection-card">
+              <span class="tag" style="background:rgba(160,113,255,0.24)">GNSS</span>
+              <div>
+                <strong>National Height Datum Control Points</strong>
+                <div class="meta"><span>Control, RINEX</span><span>94 assets</span></div>
+              </div>
+              <div class="map-mini"></div>
+            </article>
+          </div>
+        </div>
+
+        <div class="assets">
+          <div class="head"><h2>Assets</h2><span class="chip">Recently Uploaded</span></div>
+          <div class="asset-list">
+            <article class="asset">
+              <strong>morobe_block12_tile_07.copc.laz</strong>
+              <div class="meta"><span>pointcloud-lidar</span><span>EPSG:32755</span><span>1.2 GB</span></div>
+            </article>
+            <article class="asset">
+              <strong>s2_2024_03_18_scene_11.cog.tif</strong>
+              <div class="meta"><span>raster-imagery</span><span>10m</span><span>COG</span></div>
+            </article>
+            <article class="asset">
+              <strong>control_network_rnx_batch_02.zip</strong>
+              <div class="meta"><span>gnss-rinex</span><span>RINEX 3</span><span>322 MB</span></div>
+            </article>
+            <article class="asset">
+              <strong>road_labels_v6.geoparquet</strong>
+              <div class="meta"><span>ml-training-vector</span><span>2.4M features</span></div>
+            </article>
+            <article class="asset">
+              <strong>national_crs_shift_png2020.gsb</strong>
+              <div class="meta"><span>crs-definition</span><span>NTv2 grid</span></div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="panel drawer">
+      <h3>Asset Quick Drawer</h3>
+      <div class="field">s2_2024_03_18_scene_11.cog.tif</div>
+      <div class="lineup">
+        <div class="field">Type: raster-imagery</div>
+        <div class="field">Processing: analysis_ready</div>
+        <div class="field">EPSG: 32755</div>
+        <div class="field">Resolution: 10m</div>
+      </div>
+      <div class="map-big"></div>
+      <div class="lineup">
+        <div class="field">License: CC-BY-4.0</div>
+        <div class="field">Version: 1.2.0</div>
+        <div class="field">Provider: National Mapping Unit</div>
+        <div class="field">Lineage: Parent 3 datasets</div>
+      </div>
+      <div class="auth-grid">
+        <div class="field">Authorization: Allowed (role=Admin)</div>
+        <div class="field">Scope: assets:read, assets:write, collections:manage</div>
+        <div class="field">Data Zone: Agency Internal + Public</div>
+        <div class="field">Portal Lock: National Mapping Unit</div>
+      </div>
+      <button class="btn primary">Open Full Asset Page</button>
+    </aside>
+  </div>
+</body>
+</html>
