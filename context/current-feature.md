@@ -3,6 +3,7 @@
 <!-- Feature Name -->
 
 
+
 ## Status
 
 <!-- Not Started|In Progress|Completed -->
@@ -14,9 +15,11 @@ Not Started
 <!-- Goals & requirements -->
 
 
+
 ## Notes
 
 <!-- Any extra notes -->
+
 
 
 ## History
@@ -28,3 +31,5 @@ Not Started
 - Started Dashboard UI Phase 1 feature planning and tracking
 - Implemented Dashboard UI Phase 1 on feature branch (ShadCN setup, /dashboard route, dark-mode-first layout)
 - Completed Dashboard UI Phase 1 and cleared current feature fields for the next task
+- Started Dashboard UI Phase 2 feature planning and tracking
+- Implemented Dashboard UI Phase 2 (collapsible sidebar, mobile drawer, type links, collections lists, avatar area)
