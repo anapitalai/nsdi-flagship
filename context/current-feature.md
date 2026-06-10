@@ -1,22 +1,24 @@
-# Current Feature
-
-Add Favicon
+# Current Feature: Prisma + PostgreSQL Setup
 
 
 ## Status
 
-Complete
+In Progress
 
 ## Goals
 
-- Generate and add a favicon, using PNG colors.
-- Create a favicon design that blends PNG aesthetics with spatial data motifs.
+- Set up Prisma ORM with Neon PostgreSQL.
+- Create the initial schema based on the project data models.
+- Include NextAuth models for Account, Session, and VerificationToken.
+- Add appropriate indexes and cascade deletes.
 
 ## Notes
 
-- Source spec: [context/features/add-favicon.md](context/features/add-favicon.md#L1-L200).
-- Keep the favicon as a 256x256 PNG (and provide a .ico fallback) and wire it into the App Router (`/favicon.ico`).
-- Branch: `feature/add-favicon` — started 2026-06-10
+- Source spec: [context/features/database-spec.md](context/features/database-spec.md#L1-L200).
+- Reference project data models in [context/project-overview.md](context/project-overview.md#L1-L260).
+- Reference database standards in [context/coding-standards.md](context/coding-standards.md#L1-L260).
+- Use Prisma 7 and create migrations instead of pushing schema changes directly.
+- DATABASE_URL points at a local and production branch, so migrations are required.
 
 
 - ## History

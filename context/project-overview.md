@@ -289,13 +289,11 @@ Powerful faceted search across:
 
 ### Framework
 
-- Next.js 15 / React 19 (App Router)
-- SSR pages with dynamic components
-- API routes for file uploads, format detection, AI calls, OGC endpoint generation
+- Next.js 16.2.7 / React 19 (App Router)
 - TypeScript throughout
-- Separate TileDB Cloud service for COG tile-serving and Zarr array access
-- User redis for caching
-- Use socketio for realtime functionality
+- CSS-only styling with Tailwind CSS v4 and shadcn/ui primitives
+- Metadata-driven pages and route segments
+- Local static assets for the current UI surface
 
 ### Database & ORM
 
