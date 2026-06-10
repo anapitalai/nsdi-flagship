@@ -5,7 +5,7 @@ Add Favicon
 
 ## Status
 
-In Progress
+Complete
 
 ## Goals
 
@@ -19,16 +19,17 @@ In Progress
 - Branch: `feature/add-favicon` — started 2026-06-10
 
 
-## History
-
-<!-- Keep this updated. Earliest to latest -->
-
-- Initial Next.js setup
-- Project setup and boilerplate cleanup
-- Started Dashboard UI Phase 1 feature planning and tracking
-- Implemented Dashboard UI Phase 1 on feature branch (ShadCN setup, /dashboard route, dark-mode-first layout)
-- Completed Dashboard UI Phase 1 and cleared current feature fields for the next task
-- Started Dashboard UI Phase 2 feature planning and tracking
-- Implemented Dashboard UI Phase 2 (collapsible sidebar, mobile drawer, type links, collections lists, avatar area)
-- Started Dashboard UI Phase 3 feature planning and tracking
-- Implemented Dashboard UI Phase 3 (stats cards, recent collections, pinned items, and 10 recent items)
+- ## History
+-
+- <!-- Keep this updated. Earliest to latest -->
+-
+- - Initial Next.js setup
+- - Project setup and boilerplate cleanup
+- - Started Dashboard UI Phase 1 feature planning and tracking
+- - Implemented Dashboard UI Phase 1 on feature branch (ShadCN setup, /dashboard route, dark-mode-first layout)
+- - Completed Dashboard UI Phase 1 and cleared current feature fields for the next task
+- - Started Dashboard UI Phase 2 feature planning and tracking
+- - Implemented Dashboard UI Phase 2 (collapsible sidebar, mobile drawer, type links, collections lists, avatar area)
+- - Started Dashboard UI Phase 3 feature planning and tracking
+- - Implemented Dashboard UI Phase 3 (stats cards, recent collections, pinned items, and 10 recent items)
+- - Add Favicon (completed on feature/add-favicon)
