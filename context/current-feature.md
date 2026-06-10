@@ -1,38 +1,22 @@
 # Current Feature
 
-<!-- Feature Name -->
-Dashboard UI Phase 3
-
+Add Favicon
 
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
-
-Completed
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
-- Build the main area to the right of the dashboard sidebar.
-- Add a Recent Collections section.
-- Add a Pinned Items section.
-- Show 10 Recent Items.
-- Add 4 stats cards at the top for:
-	- Number of items
-	- Number of collections
-	- Favorite items
-	- Favorite collections
-
-
+- Generate and add a favicon, using PNG colors.
+- Create a favicon design that blends PNG aesthetics with spatial data motifs.
 
 ## Notes
 
-<!-- Any extra notes -->
-- Source spec: `context/features/dashboard-phase-3-spec.md`.
-- Use data from `src/lib/mock-data.ts` directly for now.
-- This is phase 3 of 3 for dashboard UI.
-
+- Source spec: [context/features/add-favicon.md](context/features/add-favicon.md#L1-L200).
+- Keep the favicon as a 256x256 PNG (and provide a .ico fallback) and wire it into the App Router (`/favicon.ico`).
+- Branch: `feature/add-favicon` — started 2026-06-10
 
 
 ## History
