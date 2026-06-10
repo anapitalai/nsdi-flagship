@@ -1,20 +1,16 @@
-# Current Feature: Run Database Migration Using .env Connection
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Confirm the database connection string is available from local environment configuration.
-- Run the database migration against the configured database.
-- Verify migration command success and report any blocking errors.
+- <!-- Add goals when a feature is loaded -->
 
 ## Notes
 
-- Loaded from inline request: "load .env has the db conn string, do the migration".
-- Do not print secret values in logs or output summaries.
-- Use project migration tooling (Prisma migration command) and capture result.
+- <!-- Add notes and constraints when a feature is loaded -->
 
 ## History
 
@@ -31,3 +27,4 @@ In Progress
 - Implemented Dashboard UI Phase 3 (stats cards, recent collections, pinned items, and 10 recent items)
 - Add Favicon (completed on feature/add-favicon)
 - Prisma + PostgreSQL Setup (completed on feature/prisma-postgresql-setup)
+- Run Database Migration Using .env Connection (completed on feature/run-database-migration-using-env-connection)
