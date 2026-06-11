@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -8,11 +7,242 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+enum OrgPlan {
+  free
+  pro
+  agency
+}
+
+enum AssetContentType {
+  file
+  url
+  content
+}
+
+enum ProcessingLevel {
+  raw
+  derived
+  analysis_ready
+  product
+}
+
+enum AssetCategory {
+  vector
+  raster
+  pointcloud
+  gnss
+  survey
+  database
+  cloud_native
+  ai_ml
+  reference
+}
+
+model Organisation {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  logoUrl     String?
+  plan        OrgPlan @default(free)
+  ssoProvider String?
+  users       User[]
+}
+
+model User {
+  id                   String         @id @default(cuid())
+  name                 String?
+  email                String?        @unique
+  emailVerified        DateTime?
+  image                String?
+  passwordHash         String?
+  isPro                Boolean        @default(false)
+  isAgency             Boolean        @default(false)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  organisationId       String?
+  organisation         Organisation?  @relation(fields: [organisationId], references: [id], onDelete: SetNull)
+  accounts             Account[]
+  sessions             Session[]
+  assets               Asset[]
+  collections          Collection[]
+  assetTypes           AssetType[]
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model AssetType {
+  id        String        @id @default(cuid())
+  name      String
+  slug      String        @unique
+  category  AssetCategory
+  icon      String
+  color     String
+  isSystem  Boolean       @default(false)
+  userId    String?
+  user      User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  assets    Asset[]
+  defaults  Collection[]  @relation("CollectionDefaultType")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+model Collection {
+  id           String            @id @default(cuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  isFavorite   Boolean           @default(false)
+  defaultTypeId String?
+  defaultType  AssetType?        @relation("CollectionDefaultType", fields: [defaultTypeId], references: [id], onDelete: SetNull)
+  spatialScope String?
+  assets       AssetCollection[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([defaultTypeId])
+  @@unique([userId, name])
+}
+
+model Asset {
+  id                   String            @id @default(cuid())
+  userId               String
+  user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetTypeId          String
+  assetType            AssetType         @relation(fields: [assetTypeId], references: [id], onDelete: Restrict)
+  title                String
+  description          String?
+  contentType          AssetContentType
+  content              String?
+  fileUrl              String?
+  fileName             String?
+  fileSize             BigInt?
+  fileFormat           String?
+  url                  String?
+  epsgCode             Int?
+  bboxWest             Float?
+  bboxSouth            Float?
+  bboxEast             Float?
+  bboxNorth            Float?
+  acquisitionDateStart DateTime?
+  acquisitionDateEnd   DateTime?
+  resolutionValue      Float?
+  resolutionUnit       String?
+  processingLevel      ProcessingLevel?
+  license              String?
+  isFavorite           Boolean           @default(false)
+  isPinned             Boolean           @default(false)
+  version              String?
+  parentAssetId        String?
+  parentAsset          Asset?            @relation("AssetVersionParent", fields: [parentAssetId], references: [id], onDelete: SetNull)
+  childVersions        Asset[]           @relation("AssetVersionParent")
+  collections          AssetCollection[]
+  tags                 AssetTag[]
+  parentEdges          AssetLineage[]    @relation("LineageParent")
+  childEdges           AssetLineage[]    @relation("LineageChild")
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([assetTypeId])
+  @@index([parentAssetId])
+  @@index([isFavorite, isPinned])
+  @@unique([userId, title])
+}
+
+model AssetCollection {
+  assetId      String
+  collectionId String
+  addedAt      DateTime   @default(now())
+  asset        Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([assetId, collectionId])
+  @@index([collectionId])
+}
+
+model Tag {
+  id        String     @id @default(cuid())
+  name      String
+  category  String
+  assets    AssetTag[]
+  createdAt DateTime   @default(now())
+
+  @@unique([name, category])
+}
+
+model AssetTag {
+  assetId String
+  tagId   String
+  addedAt DateTime @default(now())
+  asset   Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  tag     Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([assetId, tagId])
+  @@index([tagId])
+}
+
+model AssetLineage {
+  id               String   @id @default(cuid())
+  parentAssetId    String
+  childAssetId     String
+  derivationMethod String
+  createdAt        DateTime @default(now())
+  parentAsset      Asset    @relation("LineageParent", fields: [parentAssetId], references: [id], onDelete: Cascade)
+  childAsset       Asset    @relation("LineageChild", fields: [childAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([parentAssetId, childAssetId])
+  @@index([parentAssetId])
+  @@index([childAssetId])
+}
+
+/// This PostGIS table exists in many PostgreSQL installations. It is intentionally ignored by Prisma migrations.
 model spatial_ref_sys {
   srid      Int     @id
   auth_name String? @db.VarChar(256)
   auth_srid Int?
   srtext    String? @db.VarChar(2048)
   proj4text String? @db.VarChar(2048)
+
+  @@ignore
 }

@@ -1,16 +1,24 @@
 # Current Feature
 
+MinIO Integration
+
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-- <!-- Add goals when a feature is loaded -->
+- Use MinIO as the primary object store for uploaded files
+- Store object URLs or object keys in the asset model
+- Support upload, download, and delete flows
+- Keep storage credentials server-side only
+- Document any bucket naming, folder structure, and lifecycle rules
 
 ## Notes
 
-- <!-- Add notes and constraints when a feature is loaded -->
+- Scope is storage integration only
+- Use `@context/features/minio-spec.md` as the editable spec file
+- Reference `@context/project-overview.md` and `@context/coding-standards.md`
 
 ## History
 
