@@ -1,6 +1,6 @@
 import type { MinioAssetListResponse, MinioAssetPayload } from "@/types/minio";
 
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 25;
 
 type SnapshotStatus = "idle" | "loading" | "ready" | "error";
 

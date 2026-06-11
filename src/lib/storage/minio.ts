@@ -22,6 +22,20 @@ type PresignedDownloadUrlInput = {
   expiresInSeconds?: number;
 };
 
+type PresignedRequestUrlInput = {
+  method: "GET";
+  pathname: string;
+  queryParams?: Record<string, string>;
+  expiresInSeconds?: number;
+};
+
+export type MinioBucketObject = {
+  objectKey: string;
+  fileName: string;
+  fileSize: number;
+  lastModified: string | null;
+};
+
 const MINIO_TRUTHY_VALUES = new Set(["1", "true", "yes", "on"]);
 
 function getRequiredEnv(name: string): string {
@@ -87,13 +101,13 @@ function buildCanonicalUri(bucket: string, objectKey: string): string {
 function buildCanonicalQueryString(params: Record<string, string>): string {
   return Object.entries(params)
     .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
-      const keyComparison = leftKey.localeCompare(rightKey);
+      const keyComparison = leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
 
       if (keyComparison !== 0) {
         return keyComparison;
       }
 
-      return leftValue.localeCompare(rightValue);
+      return leftValue < rightValue ? -1 : leftValue > rightValue ? 1 : 0;
     })
     .map(([key, value]) => `${encodeRfc3986(key)}=${encodeRfc3986(value)}`)
     .join("&");
@@ -105,6 +119,49 @@ function createSigningKey(secretKey: string, dateStamp: string, region: string):
   const serviceKey = crypto.createHmac("sha256", regionKey).update("s3").digest();
 
   return crypto.createHmac("sha256", serviceKey).update("aws4_request").digest();
+}
+
+function createPresignedRequestUrl(
+  config: MinioConfig,
+  { method, pathname, queryParams = {}, expiresInSeconds }: PresignedRequestUrlInput
+): string {
+  const expiresIn = parseExpiresInSeconds(expiresInSeconds);
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, "");
+  const dateStamp = amzDate.slice(0, 8);
+  const host = `${config.endpoint}:${config.port}`;
+  const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  const credentialScope = `${dateStamp}/${config.region}/s3/aws4_request`;
+  const requestQueryParams = {
+    ...queryParams,
+    "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
+    "X-Amz-Credential": `${config.accessKey}/${credentialScope}`,
+    "X-Amz-Date": amzDate,
+    "X-Amz-Expires": expiresIn.toString(),
+    "X-Amz-SignedHeaders": "host",
+  };
+  const canonicalQueryString = buildCanonicalQueryString(requestQueryParams);
+  const canonicalHeaders = `host:${host}\n`;
+  const payloadHash = "UNSIGNED-PAYLOAD";
+  const canonicalRequest = [
+    method,
+    normalizedPath,
+    canonicalQueryString,
+    canonicalHeaders,
+    "host",
+    payloadHash,
+  ].join("\n");
+  const stringToSign = [
+    "AWS4-HMAC-SHA256",
+    amzDate,
+    credentialScope,
+    crypto.createHash("sha256").update(canonicalRequest).digest("hex"),
+  ].join("\n");
+  const signingKey = createSigningKey(config.secretKey, dateStamp, config.region);
+  const signature = crypto.createHmac("sha256", signingKey).update(stringToSign).digest("hex");
+  const scheme = config.useSsl ? "https" : "http";
+
+  return `${scheme}://${host}${normalizedPath}?${canonicalQueryString}&X-Amz-Signature=${signature}`;
 }
 
 export function getMinioConfig(): MinioConfig {
@@ -185,40 +242,72 @@ export function createMinioPresignedDownloadUrl(
   config: MinioConfig,
   { objectKey, expiresInSeconds }: PresignedDownloadUrlInput
 ): string {
-  const expiresIn = parseExpiresInSeconds(expiresInSeconds);
-  const now = new Date();
-  const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, "");
-  const dateStamp = amzDate.slice(0, 8);
-  const host = `${config.endpoint}:${config.port}`;
-  const canonicalUri = buildCanonicalUri(config.bucket, objectKey);
-  const credentialScope = `${dateStamp}/${config.region}/s3/aws4_request`;
-  const queryParams = {
-    "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
-    "X-Amz-Credential": `${config.accessKey}/${credentialScope}`,
-    "X-Amz-Date": amzDate,
-    "X-Amz-Expires": expiresIn.toString(),
-    "X-Amz-SignedHeaders": "host",
-  };
-  const canonicalQueryString = buildCanonicalQueryString(queryParams);
-  const canonicalHeaders = `host:${host}\n`;
-  const payloadHash = "UNSIGNED-PAYLOAD";
-  const canonicalRequest = [
-    "GET",
-    canonicalUri,
-    canonicalQueryString,
-    canonicalHeaders,
-    "host",
-    payloadHash,
-  ].join("\n");
-  const stringToSign = [
-    "AWS4-HMAC-SHA256",
-    amzDate,
-    credentialScope,
-    crypto.createHash("sha256").update(canonicalRequest).digest("hex"),
-  ].join("\n");
-  const signingKey = createSigningKey(config.secretKey, dateStamp, config.region);
-  const signature = crypto.createHmac("sha256", signingKey).update(stringToSign).digest("hex");
-  const scheme = config.useSsl ? "https" : "http";
+  return createPresignedRequestUrl(config, {
+    method: "GET",
+    pathname: buildCanonicalUri(config.bucket, objectKey),
+    expiresInSeconds,
+  });
+}
 
-  return `${scheme}://${host}${canonicalUri}?${canonicalQueryString}&X-Amz-Signature=${signature}`;
+function extractTagValue(source: string, tagName: string): string | null {
+  const match = source.match(new RegExp(`<${tagName}>([\\s\\S]*?)</${tagName}>`));
+
+  return match?.[1]?.trim() || null;
+}
+
+export async function listMinioBucketObjects(
+  config: MinioConfig,
+  { maxKeys = 1000 }: { maxKeys?: number } = {}
+): Promise<MinioBucketObject[]> {
+  const objects: MinioBucketObject[] = [];
+  let continuationToken: string | null = null;
+
+  while (true) {
+    const presignedUrl = createPresignedRequestUrl(config, {
+      method: "GET",
+      pathname: `/${config.bucket}`,
+      queryParams: {
+        "list-type": "2",
+        "max-keys": String(Math.min(maxKeys, 1000)),
+        ...(continuationToken ? { "continuation-token": continuationToken } : {}),
+      },
+      expiresInSeconds: 60,
+    });
+
+    const response = await fetch(presignedUrl, {
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to list MinIO bucket objects: ${response.status}`);
+    }
+
+    const xml = await response.text();
+    const contentBlocks = xml.match(/<Contents>[\s\S]*?<\/Contents>/g) ?? [];
+
+    for (const block of contentBlocks) {
+      const objectKey = extractTagValue(block, "Key");
+      const sizeValue = extractTagValue(block, "Size");
+
+      if (!objectKey || !sizeValue) {
+        continue;
+      }
+
+      objects.push({
+        objectKey,
+        fileName: objectKey.split("/").filter(Boolean).pop() ?? objectKey,
+        fileSize: Number.parseInt(sizeValue, 10) || 0,
+        lastModified: extractTagValue(block, "LastModified"),
+      });
+    }
+
+    const isTruncated = extractTagValue(xml, "IsTruncated") === "true";
+    continuationToken = extractTagValue(xml, "NextContinuationToken");
+
+    if (!isTruncated || !continuationToken) {
+      break;
+    }
+  }
+
+  return objects;
 }
