@@ -1,24 +1,16 @@
 # Current Feature
 
-MinIO Integration
-
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Use MinIO as the primary object store for uploaded files
-- Store object URLs or object keys in the asset model
-- Support upload, download, and delete flows
-- Keep storage credentials server-side only
-- Document any bucket naming, folder structure, and lifecycle rules
+- <!-- Add goals when a feature is loaded -->
 
 ## Notes
 
-- Scope is storage integration only
-- Use `@context/features/minio-spec.md` as the editable spec file
-- Reference `@context/project-overview.md` and `@context/coding-standards.md`
+- <!-- Add notes and constraints when a feature is loaded -->
 
 ## History
 
@@ -36,3 +28,4 @@ In Progress
 - Add Favicon (completed on feature/add-favicon)
 - Prisma + PostgreSQL Setup (completed on feature/prisma-postgresql-setup)
 - Run Database Migration Using .env Connection (completed on feature/run-database-migration-using-env-connection)
+- MinIO Integration (completed on feature/minio-integration)
