@@ -2,15 +2,22 @@
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-- <!-- Add goals when a feature is loaded -->
+- Add meaningful content to the `/` landing page
+- Keep the landing page aligned with the existing NSDI visual style
+- Include a clear call to action into the dashboard
+- Use semantic structure and plain CSS/Tailwind utility classes consistent with the app
+- Avoid changing unrelated routes or dashboard behavior
 
 ## Notes
 
-- <!-- Add notes and constraints when a feature is loaded -->
+- The current root page is only a placeholder heading
+- The landing page should feel like the app front door, not a blank stub
+- Preserve the current dark-first layout conventions
+- Prefer concise, intentional marketing-style content over a dense homepage
 
 ## History
 

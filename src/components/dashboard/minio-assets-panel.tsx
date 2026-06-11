@@ -94,7 +94,6 @@ export function MinioAssetsPanel() {
   }, [data, searchTerm, sortMode]);
 
   const loadedAssetsCount = data?.assets.length ?? 0;
-  const totalAssetsCount = data?.pageInfo.totalCount ?? 0;
   return (
     <section className="space-y-4 rounded-lg border border-border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -105,7 +104,7 @@ export function MinioAssetsPanel() {
           </h2>
           <p className="text-sm text-muted-foreground">
             {data
-              ? `${totalAssetsCount} assets available in the NSDI bucket`
+              ? `${loadedAssetsCount} assets loaded from the NSDI bucket`
               : "Loading assets from the NSDI bucket"}
           </p>
         </div>
@@ -187,8 +186,7 @@ export function MinioAssetsPanel() {
         <>
           {isLoading ? (
             <div className="rounded-md border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
-              Loaded {loadedAssetsCount} of {totalAssetsCount} assets. Loading the rest of the
-              bucket...
+              Loaded {loadedAssetsCount} assets so far. Loading the rest of the bucket...
             </div>
           ) : null}
 

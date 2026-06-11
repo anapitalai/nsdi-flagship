@@ -30,6 +30,6 @@ export type MinioAssetListResponse = {
     offset: number;
     hasNextPage: boolean;
     nextOffset: number | null;
-    totalCount: number;
+    totalCount: number | null;
   };
 };
