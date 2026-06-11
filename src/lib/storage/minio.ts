@@ -1,7 +1,10 @@
+import crypto from "node:crypto";
+
 export type MinioConfig = {
   endpoint: string;
   port: number;
   useSsl: boolean;
+  region: string;
   accessKey: string;
   secretKey: string;
   bucket: string;
@@ -12,6 +15,11 @@ type CreateObjectKeyInput = {
   userId: string;
   assetId: string;
   fileName: string;
+};
+
+type PresignedDownloadUrlInput = {
+  objectKey: string;
+  expiresInSeconds?: number;
 };
 
 const MINIO_TRUTHY_VALUES = new Set(["1", "true", "yes", "on"]);
@@ -48,11 +56,63 @@ function parsePortEnv(value: string | undefined, fallback: number): number {
   return parsedPort;
 }
 
+function parseExpiresInSeconds(value: number | undefined): number {
+  if (value === undefined) {
+    return 900;
+  }
+
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`Invalid presign expiration value: ${value}`);
+  }
+
+  return Math.min(value, 604800);
+}
+
+function encodeRfc3986(value: string): string {
+  return encodeURIComponent(value).replace(/[!'()*]/g, (character) =>
+    `%${character.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+}
+
+function buildCanonicalUri(bucket: string, objectKey: string): string {
+  const normalizedKey = objectKey.replace(/^\/+/, "");
+
+  return `/${encodeRfc3986(bucket)}/${normalizedKey
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => encodeRfc3986(segment))
+    .join("/")}`;
+}
+
+function buildCanonicalQueryString(params: Record<string, string>): string {
+  return Object.entries(params)
+    .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+      const keyComparison = leftKey.localeCompare(rightKey);
+
+      if (keyComparison !== 0) {
+        return keyComparison;
+      }
+
+      return leftValue.localeCompare(rightValue);
+    })
+    .map(([key, value]) => `${encodeRfc3986(key)}=${encodeRfc3986(value)}`)
+    .join("&");
+}
+
+function createSigningKey(secretKey: string, dateStamp: string, region: string): Buffer {
+  const dateKey = crypto.createHmac("sha256", `AWS4${secretKey}`).update(dateStamp).digest();
+  const regionKey = crypto.createHmac("sha256", dateKey).update(region).digest();
+  const serviceKey = crypto.createHmac("sha256", regionKey).update("s3").digest();
+
+  return crypto.createHmac("sha256", serviceKey).update("aws4_request").digest();
+}
+
 export function getMinioConfig(): MinioConfig {
   return {
     endpoint: getRequiredEnv("MINIO_ENDPOINT"),
     port: parsePortEnv(process.env.MINIO_PORT, 9000),
     useSsl: parseBooleanEnv(process.env.MINIO_USE_SSL, false),
+    region: process.env.MINIO_REGION?.trim() || "us-east-1",
     accessKey: getRequiredEnv("MINIO_ACCESS_KEY"),
     secretKey: getRequiredEnv("MINIO_SECRET_KEY"),
     bucket: getRequiredEnv("MINIO_BUCKET"),
@@ -83,4 +143,82 @@ export function getMinioObjectUrl(
     `${config.useSsl ? "https" : "http"}://${config.endpoint}:${config.port}/${config.bucket}`;
 
   return `${baseUrl}/${objectKey.replace(/^\/+/, "")}`;
+}
+
+export function getMinioObjectKeyFromUrl(
+  objectUrl: string | null | undefined,
+  bucketName?: string
+): string | null {
+  if (!objectUrl) {
+    return null;
+  }
+
+  try {
+    const url = new URL(objectUrl);
+    const pathnameSegments = url.pathname.split("/").filter(Boolean);
+
+    if (pathnameSegments.length === 0) {
+      return null;
+    }
+
+    if (bucketName && pathnameSegments[0] === bucketName) {
+      return pathnameSegments.slice(1).join("/") || null;
+    }
+
+    return pathnameSegments.join("/") || null;
+  } catch {
+    const fallbackSegments = objectUrl.split("/").filter(Boolean);
+
+    if (fallbackSegments.length === 0) {
+      return null;
+    }
+
+    if (bucketName && fallbackSegments[0] === bucketName) {
+      return fallbackSegments.slice(1).join("/") || null;
+    }
+
+    return fallbackSegments.join("/") || null;
+  }
+}
+
+export function createMinioPresignedDownloadUrl(
+  config: MinioConfig,
+  { objectKey, expiresInSeconds }: PresignedDownloadUrlInput
+): string {
+  const expiresIn = parseExpiresInSeconds(expiresInSeconds);
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, "");
+  const dateStamp = amzDate.slice(0, 8);
+  const host = `${config.endpoint}:${config.port}`;
+  const canonicalUri = buildCanonicalUri(config.bucket, objectKey);
+  const credentialScope = `${dateStamp}/${config.region}/s3/aws4_request`;
+  const queryParams = {
+    "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
+    "X-Amz-Credential": `${config.accessKey}/${credentialScope}`,
+    "X-Amz-Date": amzDate,
+    "X-Amz-Expires": expiresIn.toString(),
+    "X-Amz-SignedHeaders": "host",
+  };
+  const canonicalQueryString = buildCanonicalQueryString(queryParams);
+  const canonicalHeaders = `host:${host}\n`;
+  const payloadHash = "UNSIGNED-PAYLOAD";
+  const canonicalRequest = [
+    "GET",
+    canonicalUri,
+    canonicalQueryString,
+    canonicalHeaders,
+    "host",
+    payloadHash,
+  ].join("\n");
+  const stringToSign = [
+    "AWS4-HMAC-SHA256",
+    amzDate,
+    credentialScope,
+    crypto.createHash("sha256").update(canonicalRequest).digest("hex"),
+  ].join("\n");
+  const signingKey = createSigningKey(config.secretKey, dateStamp, config.region);
+  const signature = crypto.createHmac("sha256", signingKey).update(stringToSign).digest("hex");
+  const scheme = config.useSsl ? "https" : "http";
+
+  return `${scheme}://${host}${canonicalUri}?${canonicalQueryString}&X-Amz-Signature=${signature}`;
 }

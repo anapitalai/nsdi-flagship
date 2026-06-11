@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { getMinioAssetDownloadTarget } from "@/lib/db/minio-assets";
+import { getMinioAssetById } from "@/lib/db/minio-assets";
+import {
+  createMinioPresignedDownloadUrl,
+  getMinioConfig,
+  getMinioObjectKeyFromUrl,
+} from "@/lib/storage/minio";
 
 export const dynamic = "force-dynamic";
 
@@ -12,14 +17,29 @@ type RouteContext = {
 
 export async function GET(_: Request, { params }: RouteContext) {
   const { assetId } = await params;
-  const downloadTarget = await getMinioAssetDownloadTarget(assetId);
+  const asset = await getMinioAssetById(assetId);
 
-  if (!downloadTarget) {
+  if (!asset?.fileUrl) {
     return NextResponse.json(
       { error: "Asset not found" },
       { status: 404 }
     );
   }
 
-  return NextResponse.redirect(downloadTarget, 302);
+  const config = getMinioConfig();
+  const objectKey =
+    asset.objectKey ?? getMinioObjectKeyFromUrl(asset.fileUrl, config.bucket);
+
+  if (!objectKey) {
+    return NextResponse.json(
+      { error: "Asset download target is unavailable" },
+      { status: 500 }
+    );
+  }
+
+  const signedDownloadUrl = createMinioPresignedDownloadUrl(config, {
+    objectKey,
+  });
+
+  return NextResponse.redirect(signedDownloadUrl, 302);
 }

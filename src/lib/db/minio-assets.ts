@@ -1,6 +1,8 @@
 import type { Asset, AssetType, Prisma } from "@prisma/client";
 
 import prisma from "@/lib/db/prisma";
+import { getMinioObjectKeyFromUrl } from "@/lib/storage/minio";
+import type { MinioAssetListResponse, MinioAssetPayload } from "@/types/minio";
 
 const minioAssetSelect = {
   id: true,
@@ -29,40 +31,6 @@ type MinioAssetRecord = Asset & {
   assetType: Pick<AssetType, "id" | "name" | "slug" | "category" | "icon" | "color">;
 };
 
-export type MinioAssetPayload = {
-  id: string;
-  title: string;
-  description: string | null;
-  contentType: string;
-  fileUrl: string | null;
-  fileName: string | null;
-  fileSize: string | null;
-  fileFormat: string | null;
-  objectKey: string | null;
-  downloadUrl: string;
-  createdAt: string;
-  updatedAt: string;
-  assetType: {
-    id: string;
-    name: string;
-    slug: string;
-    category: string;
-    icon: string;
-    color: string;
-  };
-};
-
-export type MinioAssetListResponse = {
-  assets: MinioAssetPayload[];
-  pageInfo: {
-    limit: number;
-    offset: number;
-    hasNextPage: boolean;
-    nextOffset: number | null;
-    totalCount: number;
-  };
-};
-
 type ListMinioAssetsInput = {
   limit: number;
   offset: number;
@@ -71,21 +39,6 @@ type ListMinioAssetsInput = {
 
 function normalizeSearchValue(value: string): string {
   return value.trim();
-}
-
-function getObjectKeyFromFileUrl(fileUrl: string | null): string | null {
-  if (!fileUrl) {
-    return null;
-  }
-
-  try {
-    const url = new URL(fileUrl);
-    const objectKey = url.pathname.replace(/^\/+/, "");
-    return objectKey || null;
-  } catch {
-    const objectKey = fileUrl.replace(/^\/+/, "").replace(/\/+$/, "");
-    return objectKey || null;
-  }
 }
 
 function toMinioAssetPayload(asset: MinioAssetRecord): MinioAssetPayload {
@@ -98,7 +51,7 @@ function toMinioAssetPayload(asset: MinioAssetRecord): MinioAssetPayload {
     fileName: asset.fileName,
     fileSize: asset.fileSize ? asset.fileSize.toString() : null,
     fileFormat: asset.fileFormat,
-    objectKey: getObjectKeyFromFileUrl(asset.fileUrl),
+    objectKey: getMinioObjectKeyFromUrl(asset.fileUrl, process.env.MINIO_BUCKET ?? undefined),
     downloadUrl: `/api/minio/assets/${asset.id}/download`,
     createdAt: asset.createdAt.toISOString(),
     updatedAt: asset.updatedAt.toISOString(),

@@ -1,33 +1,15 @@
 "use client";
 
 import { Download, ExternalLink, Files, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
-
-type MinioAssetPayload = {
-  id: string;
-  title: string;
-  description: string | null;
-  fileUrl: string | null;
-  fileName: string | null;
-  fileSize: string | null;
-  fileFormat: string | null;
-  objectKey: string | null;
-  downloadUrl: string;
-  assetType: {
-    name: string;
-    slug: string;
-    color: string;
-  };
-};
-
-type MinioAssetListResponse = {
-  assets: MinioAssetPayload[];
-  pageInfo: {
-    totalCount: number;
-  };
-};
+import {
+  getMinioAssetsSnapshot,
+  refreshMinioAssets,
+  subscribeMinioAssets,
+} from "@/lib/minio-assets-store";
+import type { MinioAssetPayload } from "@/types/minio";
 
 function formatBytes(value: string | null): string {
   if (!value) {
@@ -65,49 +47,16 @@ function getStorageLabel(asset: MinioAssetPayload): string {
 }
 
 export function MinioAssetsPanel() {
-  const [data, setData] = useState<MinioAssetListResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const snapshot = useSyncExternalStore(
+    subscribeMinioAssets,
+    getMinioAssetsSnapshot,
+    getMinioAssetsSnapshot
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [sortMode, setSortMode] = useState<"newest" | "title" | "size">("newest");
-
-  useEffect(() => {
-    const abortController = new AbortController();
-
-    async function loadAssets() {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await fetch("/api/minio/assets?limit=100", {
-          signal: abortController.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to load MinIO assets");
-        }
-
-        const payload = (await response.json()) as MinioAssetListResponse;
-        setData(payload);
-      } catch (loadError) {
-        if ((loadError as Error).name === "AbortError") {
-          return;
-        }
-
-        setError(
-          loadError instanceof Error ? loadError.message : "Failed to load MinIO assets"
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    void loadAssets();
-
-    return () => {
-      abortController.abort();
-    };
-  }, []);
+  const data = snapshot.data;
+  const isLoading = snapshot.status === "idle" || snapshot.status === "loading";
+  const error = snapshot.error;
 
   const visibleAssets = useMemo(() => {
     if (!data) {
@@ -144,6 +93,8 @@ export function MinioAssetsPanel() {
     });
   }, [data, searchTerm, sortMode]);
 
+  const loadedAssetsCount = data?.assets.length ?? 0;
+  const totalAssetsCount = data?.pageInfo.totalCount ?? 0;
   return (
     <section className="space-y-4 rounded-lg border border-border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -154,7 +105,7 @@ export function MinioAssetsPanel() {
           </h2>
           <p className="text-sm text-muted-foreground">
             {data
-              ? `${data.pageInfo.totalCount} assets available in the NSDI bucket`
+              ? `${totalAssetsCount} assets available in the NSDI bucket`
               : "Loading assets from the NSDI bucket"}
           </p>
         </div>
@@ -162,29 +113,9 @@ export function MinioAssetsPanel() {
           <Button
             variant="outline"
             size="sm"
+            disabled={isLoading}
             onClick={() => {
-              setData(null);
-              setError(null);
-              setIsLoading(true);
-              void fetch("/api/minio/assets?limit=100")
-                .then((response) => {
-                  if (!response.ok) {
-                    throw new Error("Failed to load MinIO assets");
-                  }
-
-                  return response.json() as Promise<MinioAssetListResponse>;
-                })
-                .then((payload) => {
-                  setData(payload);
-                })
-                .catch((loadError: unknown) => {
-                  setError(
-                    loadError instanceof Error ? loadError.message : "Failed to load MinIO assets"
-                  );
-                })
-                .finally(() => {
-                  setIsLoading(false);
-                });
+              void refreshMinioAssets();
             }}
             className="gap-2"
           >
@@ -244,7 +175,7 @@ export function MinioAssetsPanel() {
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading && !data ? (
         <div className="rounded-md border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
           Loading assets from MinIO...
         </div>
@@ -252,53 +183,68 @@ export function MinioAssetsPanel() {
         <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           {error}
         </div>
-      ) : data && visibleAssets.length > 0 ? (
-        <ul className="space-y-2">
-          {visibleAssets.map((asset) => (
-            <li
-              key={asset.id}
-              className="rounded-md border border-border bg-muted/20 px-3 py-3 transition-colors hover:bg-muted/40"
-            >
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{asset.title}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {asset.fileName ?? "Untitled file"}{" "}
-                    {asset.fileFormat ? `• ${asset.fileFormat}` : ""}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <span className="rounded-full border border-border bg-background px-2 py-1">
-                      {formatBytes(asset.fileSize)}
-                    </span>
-                    <span className="rounded-full border border-border bg-background px-2 py-1">
-                      {asset.assetType.name}
-                    </span>
-                    <span className="rounded-full border border-border bg-background px-2 py-1">
-                      {getStorageLabel(asset)}
-                    </span>
-                    <span className="rounded-full border border-border bg-background px-2 py-1">
-                      {asset.objectKey ?? "No object key"}
-                    </span>
+      ) : data ? (
+        <>
+          {isLoading ? (
+            <div className="rounded-md border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
+              Loaded {loadedAssetsCount} of {totalAssetsCount} assets. Loading the rest of the
+              bucket...
+            </div>
+          ) : null}
+
+          {visibleAssets.length > 0 ? (
+            <ul className="space-y-2">
+              {visibleAssets.map((asset) => (
+                <li
+                  key={asset.id}
+                  className="rounded-md border border-border bg-muted/20 px-3 py-3 transition-colors hover:bg-muted/40"
+                >
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{asset.title}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {asset.fileName ?? "Untitled file"}{" "}
+                        {asset.fileFormat ? `• ${asset.fileFormat}` : ""}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        <span className="rounded-full border border-border bg-background px-2 py-1">
+                          {formatBytes(asset.fileSize)}
+                        </span>
+                        <span className="rounded-full border border-border bg-background px-2 py-1">
+                          {asset.assetType.name}
+                        </span>
+                        <span className="rounded-full border border-border bg-background px-2 py-1">
+                          {getStorageLabel(asset)}
+                        </span>
+                        <span className="rounded-full border border-border bg-background px-2 py-1">
+                          {asset.objectKey ?? "No object key"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button asChild variant="outline" size="sm" className="gap-2">
+                        <a href={asset.downloadUrl}>
+                          <Download className="size-4" />
+                          Download
+                        </a>
+                      </Button>
+                      <Button asChild variant="ghost" size="sm" className="gap-2">
+                        <a href={asset.fileUrl ?? asset.downloadUrl}>
+                          <ExternalLink className="size-4" />
+                          Open
+                        </a>
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button asChild variant="outline" size="sm" className="gap-2">
-                    <a href={asset.downloadUrl}>
-                      <Download className="size-4" />
-                      Download
-                    </a>
-                  </Button>
-                  <Button asChild variant="ghost" size="sm" className="gap-2">
-                    <a href={asset.fileUrl ?? asset.downloadUrl}>
-                      <ExternalLink className="size-4" />
-                      Open
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="rounded-md border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
+              {data ? "No MinIO assets match the current filters." : "No MinIO assets found."}
+            </div>
+          )}
+        </>
       ) : (
         <div className="rounded-md border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
           {data ? "No MinIO assets match the current filters." : "No MinIO assets found."}
