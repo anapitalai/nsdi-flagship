@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { dashboardMockData } from "@/lib/mock-data";
+import { MinioAssetsPanel } from "@/components/dashboard/minio-assets-panel";
 
 type SidebarContentProps = {
   compact?: boolean;
@@ -328,6 +329,8 @@ export default function DashboardPage() {
                 ))}
               </ul>
             </section>
+
+            <MinioAssetsPanel />
           </section>
         </section>
       </div>
