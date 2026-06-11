@@ -1,16 +1,25 @@
 # Current Feature
 
+MinIO API Routes
+
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-- <!-- Add goals when a feature is loaded -->
+- Create routes or server actions for listing bucket assets
+- Support fetching a single asset by object key or asset id
+- Support download URLs or proxy downloads for private objects
+- Keep MinIO credentials server-side only
+- Use the existing asset model for any metadata that needs to be returned
+- Document pagination, filtering, and access-control rules
 
 ## Notes
 
-- <!-- Add notes and constraints when a feature is loaded -->
+- Scope is server-side API and helper routes only
+- Use `@context/features/minio-api-spec.md` as the editable spec file
+- Reference `@context/project-overview.md`, `@context/coding-standards.md`, and `@context/features/minio-spec.md`
 
 ## History
 
