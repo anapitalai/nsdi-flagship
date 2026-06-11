@@ -1,25 +1,16 @@
 # Current Feature
 
-MinIO API Routes
-
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Create routes or server actions for listing bucket assets
-- Support fetching a single asset by object key or asset id
-- Support download URLs or proxy downloads for private objects
-- Keep MinIO credentials server-side only
-- Use the existing asset model for any metadata that needs to be returned
-- Document pagination, filtering, and access-control rules
+- <!-- Add goals when a feature is loaded -->
 
 ## Notes
 
-- Scope is server-side API and helper routes only
-- Use `@context/features/minio-api-spec.md` as the editable spec file
-- Reference `@context/project-overview.md`, `@context/coding-standards.md`, and `@context/features/minio-spec.md`
+- <!-- Add notes and constraints when a feature is loaded -->
 
 ## History
 
@@ -38,3 +29,4 @@ In Progress
 - Prisma + PostgreSQL Setup (completed on feature/prisma-postgresql-setup)
 - Run Database Migration Using .env Connection (completed on feature/run-database-migration-using-env-connection)
 - MinIO Integration (completed on feature/minio-integration)
+- MinIO API Routes (completed on feature/minio-api-routes)
