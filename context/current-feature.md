@@ -1,26 +1,16 @@
-# Current Feature: Auth Setup - NextAuth + GitHub Provider
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Install `next-auth@beta` and `@auth/prisma-adapter`.
-- Add GitHub OAuth sign-in with NextAuth default pages.
-- Split auth config into edge-compatible and full server configs.
-- Protect `/dashboard/*` routes with `src/proxy.ts`.
-- Redirect unauthenticated users to sign-in.
-- Extend the `Session` type with `user.id`.
+- <!-- Add goals when a feature is loaded -->
 
 ## Notes
 
-- Use the split config pattern for edge compatibility.
-- Create `src/auth.config.ts`, `src/auth.ts`, `src/app/api/auth/[...nextauth]/route.ts`, `src/proxy.ts`, and `src/types/next-auth.d.ts`.
-- Use `session: { strategy: 'jwt' }`.
-- Do not set a custom `pages.signIn`; use NextAuth's default page.
-- `src/proxy.ts` must export `proxy` as a named export from `auth(...)`.
-- Environment variables needed: `AUTH_SECRET`, `AUTH_GITHUB_ID`, and `AUTH_GITHUB_SECRET`.
+- <!-- Add notes and constraints when a feature is loaded -->
 
 ## History
 
@@ -42,3 +32,4 @@ In Progress
 - MinIO API Routes (completed on feature/minio-api-routes)
 - MinIO Dashboard UI (completed on feature/minio-dashboard-ui)
 - Landing Page Content (completed on feature/landing-page-content)
+- Auth Setup - NextAuth + GitHub Provider (completed on feature/auth-setup-nextauth-github-provider)
