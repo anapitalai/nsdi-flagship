@@ -13,6 +13,9 @@ const authConfig = {
       authorize: async () => null,
     }),
   ],
+  pages: {
+    signIn: "/sign-in",
+  },
 } satisfies NextAuthConfig;
 
 export default authConfig;

@@ -31,16 +31,24 @@ test("registerUser rejects invalid payloads", async () => {
 });
 
 test("registerUser normalizes and stores a new user", async () => {
-  let createArgs: Record<string, unknown> | null = null;
+  type CreateArgs = {
+    name: string;
+    email: string;
+    passwordHash: string;
+  };
+
+  let createArgs: CreateArgs | null = null;
+  let createdPasswordHash = "";
 
   const prisma = {
     user: {
       findUnique: async () => null,
       create: async (args: {
-        data: Record<string, unknown>;
+        data: CreateArgs;
         select: Record<string, boolean>;
       }) => {
         createArgs = args.data;
+        createdPasswordHash = args.data.passwordHash;
 
         return {
           id: "user_1",
@@ -68,13 +76,18 @@ test("registerUser normalizes and stores a new user", async () => {
     image: null,
     createdAt: new Date("2026-06-12T00:00:00.000Z"),
   });
-  assert.deepEqual(createArgs, {
+  const storedCreateArgs = createArgs;
+
+  if (!storedCreateArgs) {
+    throw new Error("Expected createArgs to be set");
+  }
+  assert.deepEqual(storedCreateArgs, {
     name: "Test User",
     email: "test@example.com",
-    passwordHash: createArgs?.passwordHash,
+    passwordHash: createdPasswordHash,
   });
-  assert.equal(typeof createArgs?.passwordHash, "string");
-  assert.notEqual(createArgs?.passwordHash, "password123");
+  assert.equal(typeof createdPasswordHash, "string");
+  assert.notEqual(createdPasswordHash, "password123");
 });
 
 test("authenticateCredentials accepts a valid email/password pair", async () => {
