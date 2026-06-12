@@ -46,5 +46,4 @@ AUTH_GITHUB_SECRET=
 
 ## References
 
-- Edge compatibility: https://authjs.dev/getting-started/installation#edge-compatibility
 - Prisma adapter: https://authjs.dev/getting-started/adapters/prisma

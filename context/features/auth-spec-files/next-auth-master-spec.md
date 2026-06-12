@@ -26,10 +26,10 @@ There have been changes to Prisma 7 and the prisma adapter as well as the naming
 
 - Always use migrations, never `db push`:
 - npx prisma migrate dev --name add-auth-models
-- Next.js 16 + Prisma 7 Edge Compatibility
+- Next.js 16
 - Use the split auth config pattern (see below)
 
-### Next.js 15 + Prisma 7 Edge Compatibility
+### Next.js 15
 
 Use the split auth config pattern:
 
@@ -39,5 +39,4 @@ Use the split auth config pattern:
 
 ## References
 
-- Edge compatibility: https://authjs.dev/getting-started/installation#edge-compatibility
 - Prisma adapter: https://authjs.dev/getting-started/adapters/prisma
