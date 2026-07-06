@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { NapitalaiICTCLogo } from "@/components/napitalai-ictc-logo";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,7 +21,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body>{children}</body>
+      <body>
+        <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
+          <div className="mx-auto flex h-14 max-w-7xl items-center px-4 sm:px-6 lg:px-8">
+            <NapitalaiICTCLogo size={32} />
+          </div>
+        </header>
+        {children}
+      </body>
     </html>
   );
 }
