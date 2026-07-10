@@ -12,7 +12,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ secrets.DEPLOY_SSH_KEY != '' && secrets.DEPLOY_HOST != '' && secrets.DEPLOY_USER != '' && secrets.DEPLOY_PATH != '' && secrets.DEPLOY_PORT != '' }}
     runs-on: ubuntu-latest
 
     env:
@@ -36,7 +35,32 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Check deploy secrets
+        id: deploy_secrets
+        shell: bash
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          missing=0
+          for name in DEPLOY_SSH_KEY DEPLOY_HOST DEPLOY_USER DEPLOY_PATH DEPLOY_PORT; do
+            if [[ -z "${!name}" ]]; then
+              echo "::warning::Missing secret ${name}; deployment steps will be skipped."
+              missing=1
+            fi
+          done
+
+          if [[ "$missing" -eq 0 ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Prepare deploy bundle
+        if: steps.deploy_secrets.outputs.enabled == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -49,11 +73,13 @@ jobs:
           fi
 
       - name: Start SSH agent
+        if: steps.deploy_secrets.outputs.enabled == 'true'
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
 
       - name: Configure known hosts
+        if: steps.deploy_secrets.outputs.enabled == 'true'
         shell: bash
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -70,6 +96,7 @@ jobs:
           fi
 
       - name: Sync build to web server
+        if: steps.deploy_secrets.outputs.enabled == 'true'
         shell: bash
         env:
           DEPLOY_DIR: ${{ runner.temp }}/deploy
@@ -86,6 +113,7 @@ jobs:
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
 
       - name: Configure Apache and restart app
+        if: steps.deploy_secrets.outputs.enabled == 'true'
         shell: bash
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
