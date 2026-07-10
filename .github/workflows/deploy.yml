@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ secrets.DEPLOY_SSH_KEY != '' && secrets.DEPLOY_HOST != '' && secrets.DEPLOY_USER != '' && secrets.DEPLOY_PATH != '' && secrets.DEPLOY_PORT != '' }}
     runs-on: ubuntu-latest
 
     steps:
