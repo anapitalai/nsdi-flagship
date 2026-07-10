@@ -13,6 +13,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: nsdi-flagship.raliku.com
 
     steps:
       - name: Checkout repository
@@ -29,7 +31,7 @@ jobs:
 
       - name: Generate Prisma client
         env:
-          DATABASE_URL: postgresql://localhost:5432/postgres?schema=public
+          DATABASE_URL: postgresql://postgres:admin123@170.64.167.7:30432/nsdi-flagship
         run: npx prisma generate
 
       - name: Build application
@@ -40,13 +42,12 @@ jobs:
         shell: bash
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
         run: |
           missing=0
-          for name in DEPLOY_SSH_KEY DEPLOY_HOST DEPLOY_USER DEPLOY_PATH DEPLOY_PORT; do
+          for name in DEPLOY_SSH_KEY DEPLOY_USER DEPLOY_PATH DEPLOY_PORT; do
             if [[ -z "${!name}" ]]; then
               echo "::warning::Missing secret ${name}; deployment steps will be skipped."
               missing=1
@@ -112,7 +113,6 @@ jobs:
         if: steps.deploy_secrets.outputs.enabled == 'true'
         shell: bash
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
@@ -129,7 +129,6 @@ jobs:
         shell: bash
         env:
           DEPLOY_DIR: ${{ runner.temp }}/deploy
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}

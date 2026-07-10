@@ -74,9 +74,40 @@ jobs:
 
       - name: Start SSH agent
         if: steps.deploy_secrets.outputs.enabled == 'true'
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+        shell: bash
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          KEY_FILE="$RUNNER_TEMP/deploy_key"
+          umask 077
+
+          if [[ "${DEPLOY_SSH_KEY}" == *"-----BEGIN "*"PRIVATE KEY-----"* ]]; then
+            printf '%s\n' "${DEPLOY_SSH_KEY}" | sed 's/\r$//' > "$KEY_FILE"
+          elif [[ "${DEPLOY_SSH_KEY}" == *"\\n"*"-----BEGIN "*"PRIVATE KEY-----"* ]]; then
+            printf '%b' "${DEPLOY_SSH_KEY}" | sed 's/\r$//' > "$KEY_FILE"
+          else
+            if ! printf '%s' "${DEPLOY_SSH_KEY}" | tr -d ' \n\r\t' | base64 --decode > "$KEY_FILE" 2>/dev/null; then
+              echo "::error::DEPLOY_SSH_KEY is not a valid SSH private key block and not valid base64."
+              echo "::error::Store the full private key (BEGIN/END lines) or a base64-encoded private key."
+              exit 1
+            fi
+          fi
+
+          chmod 600 "$KEY_FILE"
+
+          if ! ssh-keygen -y -f "$KEY_FILE" >/dev/null 2>&1; then
+            echo "::error::DEPLOY_SSH_KEY could not be parsed as a private key."
+            echo "::error::If this key is passphrase-protected, generate a dedicated deploy key without a passphrase."
+            exit 1
+          fi
+
+          eval "$(ssh-agent -s)"
+          ssh-add "$KEY_FILE"
+
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+
+          rm -f "$KEY_FILE"
 
       - name: Configure known hosts
         if: steps.deploy_secrets.outputs.enabled == 'true'
@@ -132,22 +163,22 @@ jobs:
             sudo apt-get install -y apache2
             sudo a2enmod proxy proxy_http headers rewrite
 
-            sudo tee "/etc/apache2/sites-available/${APACHE_SITE_NAME}" >/dev/null <<APACHE_CONF
-<VirtualHost *:80>
-    ServerName ${APP_DOMAIN}
-    ServerAlias www.${APP_DOMAIN}
-
-    ProxyPreserveHost On
-    ProxyPass / http://127.0.0.1:${APP_PORT}/
-    ProxyPassReverse / http://127.0.0.1:${APP_PORT}/
-
-    RequestHeader set X-Forwarded-Proto "http"
-    RequestHeader set X-Forwarded-Port "80"
-
-    ErrorLog \\${APACHE_LOG_DIR}/${APP_DOMAIN}-error.log
-    CustomLog \\${APACHE_LOG_DIR}/${APP_DOMAIN}-access.log combined
-</VirtualHost>
-APACHE_CONF
+            printf '%s\n' \
+              "<VirtualHost *:80>" \
+              "    ServerName ${APP_DOMAIN}" \
+              "    ServerAlias www.${APP_DOMAIN}" \
+              "" \
+              "    ProxyPreserveHost On" \
+              "    ProxyPass / http://127.0.0.1:${APP_PORT}/" \
+              "    ProxyPassReverse / http://127.0.0.1:${APP_PORT}/" \
+              "" \
+              "    RequestHeader set X-Forwarded-Proto \"http\"" \
+              "    RequestHeader set X-Forwarded-Port \"80\"" \
+              "" \
+              "    ErrorLog \\${APACHE_LOG_DIR}/${APP_DOMAIN}-error.log" \
+              "    CustomLog \\${APACHE_LOG_DIR}/${APP_DOMAIN}-access.log combined" \
+              "</VirtualHost>" \
+              | sudo tee "/etc/apache2/sites-available/${APACHE_SITE_NAME}" >/dev/null
 
             sudo a2ensite "${APACHE_SITE_NAME}"
             sudo a2dissite 000-default.conf || true
@@ -162,4 +193,4 @@ APACHE_CONF
             else
               nohup node server.js >/tmp/nsdi-flagship.log 2>&1 &
             fi
-SSH_EOF
+          SSH_EOF
