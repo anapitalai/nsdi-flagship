@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DEPLOY_HOST: nsdi-flagship.raliku.com
+      DATABASE_URL: postgresql://postgres:admin123@170.64.167.7:30432/nsdi-flagship
 
     steps:
       - name: Checkout repository
@@ -30,8 +31,6 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Generate Prisma client
-        env:
-          DATABASE_URL: postgresql://postgres:admin123@170.64.167.7:30432/nsdi-flagship
         run: npx prisma generate
 
       - name: Build application

@@ -18,6 +18,7 @@ jobs:
       APP_DOMAIN: nsdi.raliku.com
       APP_PORT: 3000
       APACHE_SITE_NAME: nsdi.raliku.com.conf
+      DATABASE_URL: postgresql://postgres:admin123@170.64.167.7:30432/nsdi-flagship
 
     steps:
       - name: Checkout repository
