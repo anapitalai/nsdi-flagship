@@ -1,16 +1,24 @@
-# Current Feature
+# Current Feature: Add GitHub Actions Spec
 
 ## Status
 
-Complete
+In Progress
 
 ## Goals
 
-<!-- No active feature goals. -->
+- Add a push-triggered deployment workflow for `main` in `.github/workflows/deploy-apache.yml`.
+- Build the Next.js app in CI using Node.js 22, `npm ci`, and `npm run build`.
+- Package deployable runtime assets from `.next/standalone`, `.next/static`, and `public` when present.
+- Transfer deployment bundle to the target host over SSH using repository secrets.
+- Restart the remote app process after deployment (for example using PM2 or systemd).
+- Serve the Next.js app via Apache2 reverse proxy to `127.0.0.1:3000` for `nsdi.raliku.com`.
 
 ## Notes
 
-<!-- No active feature notes. -->
+- Spec source: `context/features/add-gh-actions.md`.
+- Required secrets: `DEPLOY_HOST`, `DEPLOY_PORT`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_PATH`, and optional `DEPLOY_KNOWN_HOSTS`.
+- Keep HTTPS termination and virtual host routing in Apache2 config.
+- Include a manual acceptance check that push to `main` triggers deploy and app is reachable through Apache2.
 
 ## History
 

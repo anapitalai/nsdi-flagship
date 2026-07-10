@@ -1,0 +1,136 @@
+name: Deploy Next.js via Apache2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production-apache
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      APP_DOMAIN: nsdi.raliku.com
+      APP_PORT: 3000
+      APACHE_SITE_NAME: nsdi.raliku.com.conf
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build application
+        run: npm run build
+
+      - name: Prepare deploy bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOY_DIR="$RUNNER_TEMP/deploy"
+          mkdir -p "$DEPLOY_DIR/.next"
+          rsync -a --delete .next/standalone/ "$DEPLOY_DIR/"
+          rsync -a --delete .next/static/ "$DEPLOY_DIR/.next/static/"
+          if [[ -d public ]]; then
+            rsync -a --delete public/ "$DEPLOY_DIR/public/"
+          fi
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Configure known hosts
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          if [[ -n "${DEPLOY_KNOWN_HOSTS}" ]]; then
+            printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" >> ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+          fi
+
+      - name: Sync build to web server
+        shell: bash
+        env:
+          DEPLOY_DIR: ${{ runner.temp }}/deploy
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          test -d "$DEPLOY_DIR"
+          rsync -az --delete \
+            -e "ssh -p $DEPLOY_PORT" \
+            "$DEPLOY_DIR/" \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+
+      - name: Configure Apache and restart app
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' bash -s" <<'SSH_EOF'
+            set -euo pipefail
+
+            APP_DOMAIN="nsdi.raliku.com"
+            APP_PORT="3000"
+            APACHE_SITE_NAME="nsdi.raliku.com.conf"
+            sudo apt-get update -y
+            sudo apt-get install -y apache2
+            sudo a2enmod proxy proxy_http headers rewrite
+
+            sudo tee "/etc/apache2/sites-available/${APACHE_SITE_NAME}" >/dev/null <<APACHE_CONF
+<VirtualHost *:80>
+    ServerName ${APP_DOMAIN}
+    ServerAlias www.${APP_DOMAIN}
+
+    ProxyPreserveHost On
+    ProxyPass / http://127.0.0.1:${APP_PORT}/
+    ProxyPassReverse / http://127.0.0.1:${APP_PORT}/
+
+    RequestHeader set X-Forwarded-Proto "http"
+    RequestHeader set X-Forwarded-Port "80"
+
+    ErrorLog \\${APACHE_LOG_DIR}/${APP_DOMAIN}-error.log
+    CustomLog \\${APACHE_LOG_DIR}/${APP_DOMAIN}-access.log combined
+</VirtualHost>
+APACHE_CONF
+
+            sudo a2ensite "${APACHE_SITE_NAME}"
+            sudo a2dissite 000-default.conf || true
+            sudo systemctl reload apache2
+
+            cd "${DEPLOY_PATH}"
+            if command -v pm2 >/dev/null 2>&1; then
+              pm2 describe nsdi-flagship >/dev/null 2>&1 \
+                && pm2 restart nsdi-flagship --update-env \
+                || pm2 start server.js --name nsdi-flagship
+              pm2 save
+            else
+              nohup node server.js >/tmp/nsdi-flagship.log 2>&1 &
+            fi
+SSH_EOF
