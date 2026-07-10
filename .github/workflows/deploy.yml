@@ -127,9 +127,8 @@ jobs:
           chmod 700 ~/.ssh
           if [[ -n "${DEPLOY_KNOWN_HOSTS}" ]]; then
             printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" >> ~/.ssh/known_hosts
-          else
-            ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
           fi
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
 
       - name: Sync build to web server
         if: steps.deploy_secrets.outputs.enabled == 'true'
