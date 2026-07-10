@@ -127,8 +127,8 @@ Use Apache2 to proxy requests to the Next.js process running on `127.0.0.1:3000`
 
 ```apache
 <VirtualHost *:80>
-		ServerName nsdi.raliku.com
-		ServerAlias www.nsdi.raliku.com
+		ServerName nsdi-flagship.raliku.com
+		ServerAlias www.nsdi-flagship.raliku.com
 
 		ProxyPreserveHost On
 		ProxyPass / http://127.0.0.1:3000/
