@@ -17,13 +17,53 @@ export type AuthenticatedUser = {
   image: string | null;
 };
 
+function logCredentialFailure(
+  reason: string,
+  details?: Record<string, string | boolean | number | null>,
+) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.warn("[auth][credentials]", reason, details ?? {});
+}
+
+function logCredentialEvent(
+  reason: string,
+  details?: Record<string, string | boolean | number | null>,
+) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.info("[auth][credentials]", reason, details ?? {});
+}
+
 export async function authenticateCredentials(
   prisma: Pick<PrismaClient, "user">,
   payload: unknown,
 ): Promise<AuthenticatedUser | null> {
+  if (typeof payload === "object" && payload !== null) {
+    const record = payload as Record<string, unknown>;
+    logCredentialEvent("received-payload", {
+      hasEmail: typeof record.email === "string",
+      email:
+        typeof record.email === "string" ? record.email.toLowerCase().trim() : null,
+      passwordLength:
+        typeof record.password === "string" ? record.password.length : null,
+    });
+  } else {
+    logCredentialEvent("received-payload", {
+      hasEmail: false,
+      email: null,
+      passwordLength: null,
+    });
+  }
+
   const parsedCredentials = credentialsSchema.safeParse(payload);
 
   if (!parsedCredentials.success) {
+    logCredentialFailure("invalid-payload");
     return null;
   }
 
@@ -34,14 +74,22 @@ export async function authenticateCredentials(
   });
 
   if (!user?.passwordHash) {
+    logCredentialFailure("user-not-found-or-missing-password", {
+      email,
+      hasUser: Boolean(user),
+      hasPasswordHash: Boolean(user?.passwordHash),
+    });
     return null;
   }
 
   const passwordMatches = await bcrypt.compare(password, user.passwordHash);
 
   if (!passwordMatches) {
+    logCredentialFailure("password-mismatch", { email });
     return null;
   }
+
+  logCredentialEvent("sign-in-success", { email });
 
   return {
     id: user.id,

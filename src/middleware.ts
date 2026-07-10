@@ -5,7 +5,7 @@ import authConfig from "@/auth.config";
 
 const { auth } = NextAuth(authConfig);
 
-export const proxy = auth((req) => {
+export const middleware = auth((req) => {
   if (!req.auth) {
     const signInUrl = new URL("/sign-in", req.nextUrl.origin);
     signInUrl.searchParams.set("callbackUrl", req.nextUrl.href);

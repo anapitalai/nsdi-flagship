@@ -28,7 +28,11 @@ export default async function RegisterPage({
     redirect("/dashboard");
   }
 
-  const callbackUrl = resolveCallbackUrl(firstValue(searchParams?.callbackUrl), "/sign-in");
+  const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
+  const callbackUrl = resolveCallbackUrl(
+    firstValue(resolvedSearchParams.callbackUrl),
+    "/sign-in",
+  );
 
   return (
     <AuthShell

@@ -28,10 +28,14 @@ export default async function SignInPage({
     redirect("/dashboard");
   }
 
-  const callbackUrl = resolveCallbackUrl(firstValue(searchParams?.callbackUrl), "/dashboard");
-  const defaultEmail = firstValue(searchParams?.email) ?? "";
+  const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
+  const callbackUrl = resolveCallbackUrl(
+    firstValue(resolvedSearchParams.callbackUrl),
+    "/dashboard",
+  );
+  const defaultEmail = firstValue(resolvedSearchParams.email) ?? "";
   const successMessage =
-    searchParams?.registered === "1"
+    resolvedSearchParams.registered === "1"
       ? "Account created. Sign in to continue."
       : undefined;
 

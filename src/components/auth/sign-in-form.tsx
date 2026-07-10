@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import type { FormEvent } from "react";
 import { signIn } from "next-auth/react";
 import { ArrowRight } from "lucide-react";
 import { z } from "zod";
@@ -26,10 +27,9 @@ export function SignInForm({
   defaultEmail = "",
   successMessage,
 }: SignInFormProps) {
+  const isDevelopment = process.env.NODE_ENV !== "production";
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [email, setEmail] = useState(defaultEmail);
-  const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>(
     {},
   );
@@ -39,6 +39,69 @@ export function SignInForm({
     () => successMessage ?? "Use your email/password or GitHub account to continue.",
     [successMessage],
   );
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormError(null);
+    setFieldErrors({});
+
+    const formData = new FormData(event.currentTarget);
+    const parsed = signInSchema.safeParse({
+      email: formData.get("email"),
+      password: formData.get("password"),
+    });
+
+    if (!parsed.success) {
+      const issues = parsed.error.flatten().fieldErrors;
+      setFieldErrors({
+        email: issues.email?.[0],
+        password: issues.password?.[0],
+      });
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        console.info("[auth][client] submitting", {
+          email: parsed.data.email,
+          passwordLength: parsed.data.password.length,
+          callbackUrl,
+        });
+
+        const response = await signIn("credentials", {
+          redirect: false,
+          email: parsed.data.email,
+          password: parsed.data.password,
+          redirectTo: callbackUrl,
+        });
+
+        if (!response || response.error) {
+          const message = isDevelopment
+            ? `Sign in failed (${response?.error ?? "unknown"}). Check your email and password.`
+            : "Sign in failed. Check your email and password.";
+          setFormError(message);
+          console.warn("[auth][client]", {
+            response,
+            email: parsed.data.email,
+            callbackUrl,
+          });
+          return;
+        }
+
+        router.push(response.url ?? callbackUrl);
+      } catch (error) {
+        const message = isDevelopment
+          ? "Sign in request failed to reach the server. Refresh the page and try again."
+          : "Sign in is temporarily unavailable. Refresh the page and try again.";
+        setFormError(message);
+        console.error("[auth][client][fetch-failed]", {
+          error,
+          email: parsed.data.email,
+          callbackUrl,
+        });
+      }
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -53,7 +116,7 @@ export function SignInForm({
         className="w-full gap-2"
         onClick={() => {
           startTransition(() => {
-            void signIn("github", { callbackUrl });
+            void signIn("github", { redirectTo: callbackUrl });
           });
         }}
         disabled={isPending}
@@ -74,46 +137,15 @@ export function SignInForm({
 
       <form
         className="space-y-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setFormError(null);
-          setFieldErrors({});
-
-          const parsed = signInSchema.safeParse({ email, password });
-
-          if (!parsed.success) {
-            const issues = parsed.error.flatten().fieldErrors;
-            setFieldErrors({
-              email: issues.email?.[0],
-              password: issues.password?.[0],
-            });
-            return;
-          }
-
-          startTransition(async () => {
-            const response = await signIn("credentials", {
-              redirect: false,
-              email: parsed.data.email,
-              password: parsed.data.password,
-              callbackUrl,
-            });
-
-            if (!response?.ok) {
-              setFormError("Sign in failed. Check your email and password.");
-              return;
-            }
-
-            router.push(response.url ?? callbackUrl);
-          });
-        }}
+        onSubmit={handleSubmit}
       >
         <label className="space-y-2">
           <span className="text-sm font-medium">Email</span>
           <Input
+            name="email"
             type="email"
             autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            defaultValue={defaultEmail}
             placeholder="you@example.com"
           />
           {fieldErrors.email ? (
@@ -124,10 +156,9 @@ export function SignInForm({
         <label className="space-y-2">
           <span className="text-sm font-medium">Password</span>
           <Input
+            name="password"
             type="password"
             autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
             placeholder="Your password"
           />
           {fieldErrors.password ? (

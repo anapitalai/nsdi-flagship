@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
 
 const authConfig = {
+  trustHost: true,
   providers: [
     GitHub,
     Credentials({
@@ -13,6 +14,9 @@ const authConfig = {
       authorize: async () => null,
     }),
   ],
+  session: {
+    strategy: "jwt",
+  },
   pages: {
     signIn: "/sign-in",
   },
