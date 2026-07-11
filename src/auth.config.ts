@@ -2,10 +2,14 @@ import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
 
+const hasGitHubOAuth =
+  Boolean(process.env.AUTH_GITHUB_ID) &&
+  Boolean(process.env.AUTH_GITHUB_SECRET);
+
 const authConfig = {
   trustHost: true,
   providers: [
-    GitHub,
+    ...(hasGitHubOAuth ? [GitHub] : []),
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },

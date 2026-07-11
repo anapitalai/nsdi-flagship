@@ -8,10 +8,14 @@ import authConfig from "@/auth.config";
 import prisma from "@/lib/db/prisma";
 import { authenticateCredentials } from "@/lib/auth/credentials";
 
+const hasGitHubOAuth =
+  Boolean(process.env.AUTH_GITHUB_ID) &&
+  Boolean(process.env.AUTH_GITHUB_SECRET);
+
 const config = {
   ...authConfig,
   providers: [
-    GitHub,
+    ...(hasGitHubOAuth ? [GitHub] : []),
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
